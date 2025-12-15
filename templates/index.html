@@ -1,0 +1,1843 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Despacho Avanzado - Bomberos Quilmes</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet Routing Machine -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    
+    <style>
+        /* ESTILOS MINIMALISTAS */
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #0f172a;
+            color: white;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 450px 1fr;
+            height: 100vh;
+            gap: 0;
+        }
+
+        @media (max-width: 992px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+            }
+        }
+
+        /* PANEL IZQUIERDO */
+        .left-panel {
+            background: rgba(30, 41, 59, 0.95);
+            border-right: 2px solid #dc2626;
+            padding: 20px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+        }
+
+        .logo-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(220, 38, 38, 0.3);
+        }
+
+        .logo-header h1 {
+            font-size: 1.4rem;
+            color: #dc2626;
+            margin: 0;
+        }
+
+        .logo-header h1 i {
+            font-size: 1.8rem;
+        }
+
+        .config-badge {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid #3b82f6;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            margin-top: 5px;
+            display: inline-block;
+        }
+
+        /* FORMULARIO RÁPIDO */
+        .quick-form .form-control,
+        .quick-form .form-select,
+        .quick-form .form-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 12px;
+        }
+
+        .quick-form .form-control:focus,
+        .quick-form .form-select:focus,
+        .quick-form .form-input:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #3b82f6;
+            color: white;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn-dispatch {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: white;
+            border: none;
+            padding: 12px;
+            font-weight: bold;
+            border-radius: 6px;
+            width: 100%;
+            margin-top: 10px;
+            transition: all 0.2s;
+        }
+
+        .btn-dispatch:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 38, 38, 0.4);
+        }
+
+        .btn-secondary-action {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 6px;
+            width: 100%;
+            margin-top: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary-action:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* MAPA */
+        #map-container {
+            height: 100vh;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* CONTROLES DE MAPA */
+        .map-controls {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 12px;
+            border-radius: 8px;
+            width: 220px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .location-info {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 12px;
+            border-radius: 8px;
+            z-index: 1000;
+            border: 1px solid rgba(220, 38, 38, 0.3);
+        }
+
+        /* TOAST NOTIFICATIONS */
+        .toast-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+            min-width: 300px;
+            background: rgba(0, 0, 0, 0.95);
+            border: 1px solid #dc2626;
+            border-radius: 6px;
+            padding: 15px;
+            color: white;
+            display: none;
+            backdrop-filter: blur(10px);
+        }
+
+        /* MÓVILES RÁPIDOS */
+        .quick-mobiles {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .mobile-btn {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid #3b82f6;
+            color: white;
+            padding: 10px 8px;
+            border-radius: 6px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .mobile-btn:hover {
+            background: rgba(59, 130, 246, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .mobile-btn.selected {
+            background: rgba(59, 130, 246, 0.6);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+            border-color: #60a5fa;
+        }
+
+        .mobile-btn.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ESTADOS RÁPIDOS */
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+
+        .status-available {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .status-busy {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .status-maintenance {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        /* AUTOCOMPLETADO */
+        .suggestions {
+            position: absolute;
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            z-index: 1000;
+            width: 100%;
+            backdrop-filter: blur(10px);
+        }
+
+        .suggestion-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: background 0.2s;
+        }
+
+        .suggestion-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* ZONA DE CONFIGURACIÓN */
+        .config-section {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .config-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .config-input {
+            width: 180px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 4px;
+            padding: 6px 8px;
+            font-size: 0.9rem;
+        }
+
+        .config-input:focus {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #3b82f6;
+            outline: none;
+        }
+
+        /* PANEL DE HARDWARE */
+        .hardware-panel {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .hardware-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .hardware-led {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ef4444;
+            animation: pulse 2s infinite;
+        }
+
+        .hardware-led.connected {
+            background: #22c55e;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+
+        /* MÓVILES EN MAPA */
+        .mobile-marker {
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+
+        /* HISTORIAL RÁPIDO */
+        .history-badge {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* RUTA INFO */
+        .route-info {
+            position: absolute;
+            bottom: 80px;
+            left: 15px;
+            right: 15px;
+            z-index: 1000;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            display: none;
+        }
+
+        .route-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .route-stat {
+            padding: 5px;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 4px;
+        }
+
+        .route-stat-value {
+            font-weight: bold;
+            color: #8b5cf6;
+            font-size: 1.1rem;
+        }
+
+        .route-stat-label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- PANEL IZQUIERDO - FORMULARIO Y CONFIGURACIÓN -->
+        <div class="left-panel">
+            <div class="logo-header">
+                <h1><i class="bi bi-fire"></i> BOMBEROS QUILMES</h1>
+                <small>Sistema de Despacho Avanzado v2.0</small>
+                <div class="config-badge">
+                    <i class="bi bi-geo-alt"></i> Estación: <span id="station-zone">Quilmes Centro</span>
+                </div>
+            </div>
+
+            <form class="quick-form" id="quick-form">
+                <!-- TIPO DE INCIDENTE -->
+                <div class="mb-3">
+                    <label class="form-label"><i class="bi bi-exclamation-triangle"></i> TIPO DE INCIDENTE</label>
+                    <select class="form-select" id="incident-type" required>
+                        <option value="" selected disabled>Seleccionar...</option>
+                        <option value="fuego">🔥 Incendio Estructural</option>
+                        <option value="fuego_vehicular">🚗 Incendio Vehicular</option>
+                        <option value="accidente">🚑 Accidente de Tránsito</option>
+                        <option value="rescate">🦺 Rescate Vertical</option>
+                        <option value="quimico">⚠️ Material Peligroso</option>
+                        <option value="inundacion">🌊 Inundación</option>
+                        <option value="asistencia">🆘 Asistencia Médica</option>
+                        <option value="otro">📋 Otro</option>
+                    </select>
+                </div>
+
+                <!-- DIRECCIÓN RÁPIDA -->
+                <div class="mb-3 position-relative">
+                    <label class="form-label"><i class="bi bi-geo-alt"></i> UBICACIÓN</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="address-input"
+                           placeholder="Escriba dirección o use mapa"
+                           required>
+                    <div class="suggestions" id="suggestions"></div>
+                </div>
+
+                <!-- PRIORIDAD -->
+                <div class="mb-3">
+                    <label class="form-label"><i class="bi bi-speedometer2"></i> PRIORIDAD</label>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-success flex-grow-1 priority-btn" data-priority="baja">BAJA</button>
+                        <button type="button" class="btn btn-sm btn-outline-warning flex-grow-1 priority-btn" data-priority="media">MEDIA</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger flex-grow-1 priority-btn active" data-priority="alta">ALTA</button>
+                    </div>
+                </div>
+
+                <!-- DETALLES RÁPIDOS -->
+                <div class="mb-3">
+                    <label class="form-label"><i class="bi bi-chat-text"></i> DETALLES RÁPIDOS</label>
+                    <textarea class="form-control" 
+                              id="quick-details" 
+                              rows="3"
+                              placeholder="Descripción del incidente, personas afectadas, riesgos..."></textarea>
+                </div>
+
+                <!-- MÓVILES RÁPIDOS -->
+                <div class="mb-3">
+                    <label class="form-label"><i class="bi bi-truck"></i> MÓVILES DISPONIBLES</label>
+                    <div class="quick-mobiles" id="quick-mobiles">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                </div>
+
+                <!-- BOTONES DE ACCIÓN -->
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn-secondary-action" id="btn-quick-search">
+                        <i class="bi bi-search"></i> BUSCAR EN MAPA
+                    </button>
+
+                    <button type="button" class="btn-secondary-action" id="btn-calculate-route">
+                        <i class="bi bi-signpost-split"></i> CALCULAR RUTA
+                    </button>
+
+                    <button type="submit" class="btn-dispatch" id="btn-dispatch">
+                        <i class="bi bi-send"></i> DESPACHAR UNIDADES
+                    </button>
+                </div>
+
+                <!-- PANEL DE HARDWARE -->
+                <div class="hardware-panel">
+                    <div class="hardware-status">
+                        <div class="hardware-led" id="hardware-led"></div>
+                        <span>Estado Hardware: <span id="hardware-status">Desconectado</span></span>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-info w-100" id="btn-connect-hardware">
+                        <i class="bi bi-plug"></i> CONECTAR HARDWARE
+                    </button>
+                </div>
+
+                <!-- ESTADÍSTICAS -->
+                <div class="mt-3 pt-3 border-top border-secondary">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="text-warning fw-bold" id="mobile-count">0/0</div>
+                            <small class="text-muted">Móviles</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-success fw-bold" id="incident-count">0</div>
+                            <small class="text-muted">Hoy</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-info fw-bold" id="response-time">0s</div>
+                            <small class="text-muted">Respuesta</small>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <!-- CONFIGURACIÓN DE ZONA (EDITABLE) -->
+            <div class="config-section">
+                <h6><i class="bi bi-gear"></i> CONFIGURACIÓN DE ZONA</h6>
+                <div class="config-item">
+                    <span>Estación:</span>
+                    <input type="text" class="config-input" id="input-station" value="Quilmes Centro">
+                </div>
+                <div class="config-item">
+                    <span>Coordenadas:</span>
+                    <input type="text" class="config-input" id="input-coords" value="-34.7200, -58.2580">
+                </div>
+                <div class="config-item">
+                    <span>Radio Cobertura (km):</span>
+                    <input type="number" class="config-input" id="input-radius" value="5" min="1" max="50">
+                </div>
+                <div class="d-flex gap-2 mt-2">
+                    <button class="btn btn-sm btn-primary flex-grow-1" id="btn-save-config">
+                        <i class="bi bi-save"></i> Guardar Configuración
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary flex-grow-1" id="btn-reset-config">
+                        <i class="bi bi-arrow-clockwise"></i> Restaurar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAPA -->
+        <div id="map-container">
+            <div id="map"></div>
+            
+            <!-- HISTORIAL RÁPIDO -->
+            <div class="history-badge">
+                <i class="bi bi-clock-history"></i> Último: <span id="last-incident">Ninguno</span>
+            </div>
+
+            <!-- CONTROLES DE MAPA -->
+            <div class="map-controls">
+                <div class="input-group input-group-sm mb-2">
+                    <input type="text" 
+                           class="form-control" 
+                           id="map-search" 
+                           placeholder="Buscar en Quilmes...">
+                    <button class="btn btn-primary btn-sm" type="button" id="btn-map-search">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-light flex-grow-1" id="btn-zoom-in">
+                        <i class="bi bi-plus"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-light flex-grow-1" id="btn-zoom-out">
+                        <i class="bi bi-dash"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-warning flex-grow-1" id="btn-center">
+                        <i class="bi bi-house"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-info flex-grow-1" id="btn-show-mobiles">
+                        <i class="bi bi-truck"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-purple flex-grow-1" id="btn-show-route">
+                        <i class="bi bi-signpost-split"></i>
+                    </button>
+                </div>
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-danger w-100" id="btn-emergency-stop">
+                        <i class="bi bi-stop-circle"></i> PARADA DE EMERGENCIA
+                    </button>
+                </div>
+            </div>
+
+            <!-- INFO DE RUTA -->
+            <div class="route-info" id="route-info">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong><i class="bi bi-signpost-split"></i> RUTA CALCULADA</strong>
+                        <div id="route-details" class="text-muted small">Base → Incidente</div>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-success me-1" id="btn-confirm-route">
+                            <i class="bi bi-check"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" id="btn-clear-route">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="route-stats">
+                    <div class="route-stat">
+                        <div class="route-stat-value" id="route-distance">-- km</div>
+                        <div class="route-stat-label">Distancia</div>
+                    </div>
+                    <div class="route-stat">
+                        <div class="route-stat-value" id="route-time">-- min</div>
+                        <div class="route-stat-label">Tiempo</div>
+                    </div>
+                    <div class="route-stat">
+                        <div class="route-stat-value" id="route-speed">-- km/h</div>
+                        <div class="route-stat-label">Velocidad</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- INFO DE UBICACIÓN -->
+            <div class="location-info" id="location-info">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong><i class="bi bi-geo-alt"></i> Ubicación Marcada</strong>
+                        <div id="location-coords" class="text-muted small">Sin ubicación seleccionada</div>
+                        <div id="location-address" class="small">-</div>
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-success me-1" id="btn-confirm-location">
+                            <i class="bi bi-check"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" id="btn-clear-location">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- NOTIFICACIÓN -->
+        <div class="toast-notification" id="toast">
+            <div id="toast-message"></div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Routing Machine -->
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <!-- Socket.IO para conexión con hardware -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+
+    <script>
+        // ===== CONFIGURACIÓN AVANZADA CON PARÁMETROS DE ZONA =====
+        const CONFIG = {
+            // PARÁMETROS DE ZONA (EDITABLES)
+            estacion: {
+                nombre: "Quilmes Centro",
+                coordenadas: [-34.7200, -58.2580],
+                radioCobertura: 5, // km
+                zonaOperativa: "Zona 1 - Centro",
+                contacto: "011-4251-2222"
+            },
+            
+            // FLOTA COMPLETA DE MÓVILES
+            moviles: [
+                { id: 1, nombre: "Móvil 1", tipo: "Auto Bomba", estado: "disponible", ubicacion: [-34.7210, -58.2600], equipo: ["AGUA", "ESPUMA", "HIDRANTE"] },
+                { id: 2, nombre: "Móvil 2", tipo: "Auto Escala", estado: "disponible", ubicacion: [-34.7180, -58.2550], equipo: ["ESCALA 30m", "CANASTILLA"] },
+                { id: 3, nombre: "Móvil 3", tipo: "Unidad Rescate", estado: "disponible", ubicacion: [-34.7220, -58.2500], equipo: ["HERRAMIENTAS", "CÁMARA", "OXÍGENO"] },
+                { id: 4, nombre: "Móvil 4", tipo: "Auto Bomba", estado: "ocupado", ubicacion: [-34.7150, -58.2650], equipo: ["AGUA", "ESPUMA"] },
+                { id: 5, nombre: "Móvil 5", tipo: "Hazmat", estado: "disponible", ubicacion: [-34.7250, -58.2450], equipo: ["TRAJES QUÍMICOS", "DETECTORES"] },
+                { id: 6, nombre: "Móvil 6", tipo: "Ambulancia", estado: "disponible", ubicacion: [-34.7190, -58.2620], equipo: ["ATENCIÓN MÉDICA", "DESFIBRILADOR"] },
+                { id: 7, nombre: "Móvil 7", tipo: "Comando", estado: "mantenimiento", ubicacion: [-34.7200, -58.2580], equipo: ["COMUNICACIONES", "COMPUTADORAS"] },
+                { id: 8, nombre: "Móvil 8", tipo: "Auto Bomba", estado: "disponible", ubicacion: [-34.7160, -58.2520], equipo: ["AGUA", "ESPUMA", "CAÑÓN"] }
+            ],
+            
+            // TIPOS DE INCIDENTE CON PRIORIDADES
+            tiposIncidente: {
+                fuego: { nombre: "Incendio Estructural", prioridad: "alta", color: "#dc2626", icono: "🔥" },
+                fuego_vehicular: { nombre: "Incendio Vehicular", prioridad: "media", color: "#f97316", icono: "🚗" },
+                accidente: { nombre: "Accidente de Tránsito", prioridad: "alta", color: "#ef4444", icono: "🚑" },
+                rescate: { nombre: "Rescate Vertical", prioridad: "alta", color: "#0ea5e9", icono: "🦺" },
+                quimico: { nombre: "Material Peligroso", prioridad: "alta", color: "#8b5cf6", icono: "⚠️" },
+                inundacion: { nombre: "Inundación", prioridad: "media", color: "#06b6d4", icono: "🌊" },
+                asistencia: { nombre: "Asistencia Médica", prioridad: "media", color: "#10b981", icono: "🆘" },
+                otro: { nombre: "Otro", prioridad: "baja", color: "#6b7280", icono: "📋" }
+            },
+            
+            // CONFIGURACIÓN DE HARDWARE
+            hardware: {
+                puerto: "COM3",
+                baudRate: 9600,
+                protocolo: "MODBUS-RTU",
+                sensores: ["GPS", "TEMP", "HUM", "GAS", "MOVIMIENTO"],
+                estado: "desconectado",
+                ultimaConexion: null
+            },
+            
+            // HISTORIAL
+            historial: [],
+            maxHistorial: 50
+        };
+
+        // ===== SISTEMA AVANZADO DE DESPACHO =====
+        class SistemaDespachoAvanzado {
+            constructor() {
+                this.map = null;
+                this.marker = null;
+                this.selectedLocation = null;
+                this.selectedMobiles = new Set();
+                this.incidentCount = 0;
+                this.historial = [];
+                this.priority = "alta";
+                this.mobileMarkers = new Map();
+                this.hardwareConnected = false;
+                this.socket = null;
+                this.responseTimer = null;
+                this.startTime = null;
+                this.routingControl = null;
+                this.routeVisible = false;
+                
+                this.init();
+            }
+            
+            init() {
+                console.log("🚒 Iniciando sistema avanzado de despacho...");
+                console.log("📍 Estación configurada:", CONFIG.estacion.nombre);
+                
+                // 1. Inicializar interfaz
+                this.updateConfigDisplay();
+                
+                // 2. Cargar mapa
+                this.loadMap();
+                
+                // 3. Cargar móviles
+                this.loadMobiles();
+                
+                // 4. Configurar eventos
+                this.setupEvents();
+                
+                // 5. Inicializar hardware (simulación)
+                this.initHardware();
+                
+                // 6. Mostrar estación y cobertura
+                setTimeout(() => {
+                    this.showEstacion();
+                    this.showCobertura();
+                    this.updateMobilePositions();
+                }, 200);
+                
+                console.log("✅ Sistema avanzado listo");
+                this.showToast("Sistema de Despacho Avanzado iniciado", "success");
+            }
+            
+            updateConfigDisplay() {
+                document.getElementById('station-zone').textContent = CONFIG.estacion.nombre;
+                document.getElementById('input-station').value = CONFIG.estacion.nombre;
+                document.getElementById('input-coords').value = 
+                    `${CONFIG.estacion.coordenadas[0].toFixed(4)}, ${CONFIG.estacion.coordenadas[1].toFixed(4)}`;
+                document.getElementById('input-radius').value = CONFIG.estacion.radioCobertura;
+            }
+            
+            loadMap() {
+                try {
+                    this.map = L.map('map', {
+                        center: CONFIG.estacion.coordenadas,
+                        zoom: 14,
+                        zoomControl: false,
+                        attributionControl: false
+                    });
+                    
+                    // Capa base OSM
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        attribution: '© OpenStreetMap'
+                    }).addTo(this.map);
+                    
+                    // Ajustar tamaño
+                    setTimeout(() => this.map.invalidateSize(), 100);
+                    
+                } catch (error) {
+                    console.error("❌ Error cargando mapa:", error);
+                    this.showErrorMap();
+                }
+            }
+            
+            showErrorMap() {
+                document.getElementById('map').innerHTML = `
+                    <div style="background: #1e293b; color: white; height: 100%; display: flex; align-items: center; justify-content: center;">
+                        <div class="text-center p-4">
+                            <i class="bi bi-exclamation-triangle" style="font-size: 3rem; color: #f59e0b;"></i>
+                            <h4 class="mt-3">Error cargando mapa</h4>
+                            <p class="text-muted">Verifique su conexión a internet</p>
+                            <button onclick="sistema.reloadMap()" class="btn btn-warning mt-2">
+                                <i class="bi bi-arrow-clockwise"></i> Reintentar
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            reloadMap() {
+                document.getElementById('map').innerHTML = '';
+                this.loadMap();
+                setTimeout(() => {
+                    this.showEstacion();
+                    this.showCobertura();
+                    this.updateMobilePositions();
+                }, 500);
+            }
+            
+            showEstacion() {
+                if (!this.map) return;
+                
+                // Marcador de estación
+                L.marker(CONFIG.estacion.coordenadas, {
+                    icon: L.divIcon({
+                        className: 'estacion-marker',
+                        html: `<div style="background: #3b82f6; width: 45px; height: 45px; border-radius: 50%; border: 3px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px #3b82f6;">
+                                 <i class="bi bi-building" style="color: white; font-size: 20px;"></i>
+                               </div>`,
+                        iconSize: [45, 45]
+                    })
+                })
+                .addTo(this.map)
+                .bindPopup(`
+                    <b>${CONFIG.estacion.nombre}</b><br>
+                    ${CONFIG.estacion.zonaOperativa}<br>
+                    📞 ${CONFIG.estacion.contacto}<br>
+                    📍 ${CONFIG.estacion.coordenadas[0].toFixed(6)}, ${CONFIG.estacion.coordenadas[1].toFixed(6)}
+                `);
+            }
+            
+            showCobertura() {
+                if (!this.map) return;
+                
+                // Círculo de cobertura
+                L.circle(CONFIG.estacion.coordenadas, {
+                    color: '#3b82f6',
+                    fillColor: '#1d4ed8',
+                    fillOpacity: 0.1,
+                    radius: CONFIG.estacion.radioCobertura * 1000
+                }).addTo(this.map);
+            }
+            
+            loadMobiles() {
+                const container = document.getElementById('quick-mobiles');
+                container.innerHTML = CONFIG.moviles.map(movil => `
+                    <div class="mobile-btn ${movil.estado === 'disponible' ? '' : 'disabled'}" 
+                         data-id="${movil.id}"
+                         onclick="sistema.selectMobile(${movil.id})"
+                         title="${movil.tipo} - ${movil.equipo.join(', ')}">
+                        <div class="fw-bold">${movil.nombre}</div>
+                        <small class="text-muted">${movil.tipo}</small>
+                        <div class="status-badge ${this.getStatusClass(movil.estado)}">
+                            ${movil.estado.toUpperCase()}
+                        </div>
+                    </div>
+                `).join('');
+                
+                this.updateMobileCount();
+            }
+            
+            getStatusClass(estado) {
+                switch(estado) {
+                    case 'disponible': return 'status-available';
+                    case 'ocupado': return 'status-busy';
+                    case 'mantenimiento': return 'status-maintenance';
+                    default: return 'status-busy';
+                }
+            }
+            
+            selectMobile(id) {
+                const mobileBtn = document.querySelector(`.mobile-btn[data-id="${id}"]`);
+                const mobile = CONFIG.moviles.find(m => m.id === id);
+                
+                if (mobile.estado !== 'disponible') {
+                    this.showToast(`${mobile.nombre} no disponible (${mobile.estado})`, "warning");
+                    return;
+                }
+                
+                if (this.selectedMobiles.has(id)) {
+                    this.selectedMobiles.delete(id);
+                    mobileBtn.classList.remove('selected');
+                } else {
+                    this.selectedMobiles.add(id);
+                    mobileBtn.classList.add('selected');
+                }
+                
+                this.updateMobileCount();
+            }
+            
+            updateMobileCount() {
+                const available = CONFIG.moviles.filter(m => m.estado === 'disponible').length;
+                const selected = this.selectedMobiles.size;
+                document.getElementById('mobile-count').textContent = `${selected}/${available}`;
+            }
+            
+            updateMobilePositions() {
+                // Limpiar marcadores antiguos
+                this.mobileMarkers.forEach(marker => {
+                    if (marker && this.map) {
+                        this.map.removeLayer(marker);
+                    }
+                });
+                this.mobileMarkers.clear();
+                
+                // Agregar nuevos marcadores
+                CONFIG.moviles.forEach(movil => {
+                    if (movil.ubicacion) {
+                        const icon = L.divIcon({
+                            className: 'mobile-marker',
+                            html: `
+                                <div style="
+                                    background: ${movil.estado === 'disponible' ? '#22c55e' : movil.estado === 'ocupado' ? '#ef4444' : '#f59e0b'};
+                                    width: 32px;
+                                    height: 32px;
+                                    border-radius: 50%;
+                                    border: 2px solid white;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                                    transform: translate(-50%, -50%);
+                                ">
+                                    <i class="bi bi-truck" style="color: white; font-size: 14px;"></i>
+                                </div>
+                            `,
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 16]
+                        });
+                        
+                        const marker = L.marker(movil.ubicacion, { icon })
+                            .addTo(this.map)
+                            .bindPopup(`
+                                <b>${movil.nombre}</b><br>
+                                Tipo: ${movil.tipo}<br>
+                                Estado: ${movil.estado}<br>
+                                Equipo: ${movil.equipo.join(', ')}
+                            `);
+                        
+                        this.mobileMarkers.set(movil.id, marker);
+                    }
+                });
+            }
+            
+            setupEvents() {
+                // Click en el mapa
+                this.map.on('click', (e) => {
+                    this.setLocation(e.latlng);
+                });
+                
+                // Botones de prioridad
+                document.querySelectorAll('.priority-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        this.priority = e.target.dataset.priority;
+                    });
+                });
+                
+                // Búsqueda desde formulario
+                document.getElementById('btn-quick-search').addEventListener('click', () => {
+                    this.searchAddress();
+                });
+                
+                // Búsqueda desde mapa
+                document.getElementById('btn-map-search').addEventListener('click', () => {
+                    const query = document.getElementById('map-search').value;
+                    if (query) this.searchAddress(query);
+                });
+                
+                document.getElementById('map-search').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.searchAddress(e.target.value);
+                });
+                
+                // Controles del mapa
+                document.getElementById('btn-zoom-in').addEventListener('click', () => this.map.zoomIn());
+                document.getElementById('btn-zoom-out').addEventListener('click', () => this.map.zoomOut());
+                document.getElementById('btn-center').addEventListener('click', () => {
+                    this.map.setView(CONFIG.estacion.coordenadas, 14);
+                });
+                
+                document.getElementById('btn-show-mobiles').addEventListener('click', () => {
+                    this.updateMobilePositions();
+                    this.showToast("Posiciones de móviles actualizadas", "info");
+                });
+                
+                // Calcular ruta
+                document.getElementById('btn-calculate-route').addEventListener('click', () => {
+                    this.calculateRoute();
+                });
+                
+                document.getElementById('btn-show-route').addEventListener('click', () => {
+                    if (this.routeVisible) {
+                        this.clearRoute();
+                    } else {
+                        this.calculateRoute();
+                    }
+                });
+                
+                document.getElementById('btn-confirm-route').addEventListener('click', () => {
+                    this.showToast("Ruta confirmada", "success");
+                });
+                
+                document.getElementById('btn-clear-route').addEventListener('click', () => {
+                    this.clearRoute();
+                });
+                
+                // Limpiar ubicación
+                document.getElementById('btn-clear-location').addEventListener('click', () => {
+                    this.clearLocation();
+                });
+                
+                document.getElementById('btn-confirm-location').addEventListener('click', () => {
+                    if (this.selectedLocation) {
+                        this.showToast("Ubicación confirmada", "success");
+                    }
+                });
+                
+                // Parada de emergencia
+                document.getElementById('btn-emergency-stop').addEventListener('click', () => {
+                    if (confirm("¿ESTÁ SEGURO DE EJECUTAR PARADA DE EMERGENCIA?\n\nSe cancelarán todos los despachos en curso.")) {
+                        this.emergencyStop();
+                    }
+                });
+                
+                // Guardar configuración
+                document.getElementById('btn-save-config').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.saveConfig();
+                });
+                
+                document.getElementById('btn-reset-config').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.resetConfig();
+                });
+                
+                // Conexión hardware
+                document.getElementById('btn-connect-hardware').addEventListener('click', () => {
+                    this.connectHardware();
+                });
+                
+                // Autocompletado
+                const addressInput = document.getElementById('address-input');
+                const suggestions = document.getElementById('suggestions');
+                
+                addressInput.addEventListener('input', (e) => {
+                    const query = e.target.value.toLowerCase();
+                    if (query.length < 3) {
+                        suggestions.style.display = 'none';
+                        return;
+                    }
+                    
+                    // Mostrar mensaje de búsqueda
+                    suggestions.innerHTML = `
+                        <div class="suggestion-item">
+                            <i class="bi bi-search me-2"></i>Buscando "${query}"...
+                        </div>
+                    `;
+                    suggestions.style.display = 'block';
+                });
+                
+                document.addEventListener('click', (e) => {
+                    if (!addressInput.contains(e.target) && !suggestions.contains(e.target)) {
+                        suggestions.style.display = 'none';
+                    }
+                });
+                
+                // Envío del formulario
+                document.getElementById('quick-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.dispatch();
+                });
+                
+                addressInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.searchAddress();
+                    }
+                });
+                
+                // Timer de respuesta
+                this.startResponseTimer();
+            }
+            
+            setLocation(latlng) {
+                if (this.marker) {
+                    this.map.removeLayer(this.marker);
+                }
+                
+                this.marker = L.marker([latlng.lat, latlng.lng], {
+                    icon: L.divIcon({
+                        className: 'incident-marker',
+                        html: `<div style="background: #dc2626; width: 40px; height: 40px; border-radius: 50%; border: 3px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 20px #dc2626;">
+                                 <i class="bi bi-exclamation-triangle" style="color: white; font-size: 18px;"></i>
+                               </div>`,
+                        iconSize: [40, 40]
+                    })
+                }).addTo(this.map);
+                
+                this.selectedLocation = [latlng.lat, latlng.lng];
+                
+                document.getElementById('location-coords').textContent = 
+                    `${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`;
+                document.getElementById('location-address').textContent = 
+                    `Coordenadas seleccionadas`;
+                document.getElementById('location-info').style.display = 'block';
+                
+                document.getElementById('address-input').value = 
+                    `Coordenadas: ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}`;
+                
+                this.map.setView([latlng.lat, latlng.lng], 16);
+                
+                this.showToast("Ubicación marcada en el mapa", "success");
+            }
+            
+            clearLocation() {
+                if (this.marker) {
+                    this.map.removeLayer(this.marker);
+                    this.marker = null;
+                    this.selectedLocation = null;
+                    document.getElementById('location-info').style.display = 'none';
+                    document.getElementById('address-input').value = '';
+                    this.showToast("Ubicación limpiada", "info");
+                }
+            }
+            
+            async searchAddress(query = null) {
+                const address = query || document.getElementById('address-input').value;
+                
+                if (!address.trim()) {
+                    this.showToast("Ingrese una dirección para buscar", "warning");
+                    return;
+                }
+                
+                this.showToast("Buscando ubicación...", "info");
+                
+                try {
+                    const response = await fetch(
+                        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ', Quilmes, Buenos Aires')}&limit=1&countrycodes=AR`,
+                        {
+                            headers: { 
+                                'User-Agent': 'BomberosQuilmes/2.0',
+                                'Accept-Language': 'es-AR,es;q=0.9'
+                            }
+                        }
+                    );
+                    
+                    const data = await response.json();
+                    
+                    if (data.length > 0) {
+                        const result = data[0];
+                        const lat = parseFloat(result.lat);
+                        const lon = parseFloat(result.lon);
+                        
+                        this.setLocation({ lat, lng: lon });
+                        
+                        // Obtener dirección más detallada
+                        const detailedResponse = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`
+                        );
+                        const detailedData = await detailedResponse.json();
+                        
+                        const displayName = detailedData.display_name.split(',').slice(0, 3).join(',');
+                        document.getElementById('address-input').value = displayName;
+                        document.getElementById('location-address').textContent = displayName;
+                        
+                    } else {
+                        this.showToast("Dirección no encontrada, usando aproximación", "warning");
+                        const approx = {
+                            lat: CONFIG.estacion.coordenadas[0] + (Math.random() * 0.05 - 0.025),
+                            lng: CONFIG.estacion.coordenadas[1] + (Math.random() * 0.05 - 0.025)
+                        };
+                        this.setLocation(approx);
+                    }
+                    
+                } catch (error) {
+                    console.error("Error en búsqueda:", error);
+                    this.showToast("Usando ubicación aproximada", "warning");
+                    
+                    const approx = {
+                        lat: CONFIG.estacion.coordenadas[0] + (Math.random() * 0.05 - 0.025),
+                        lng: CONFIG.estacion.coordenadas[1] + (Math.random() * 0.05 - 0.025)
+                    };
+                    this.setLocation(approx);
+                }
+            }
+            
+            calculateRoute() {
+                if (!this.selectedLocation) {
+                    this.showToast("Primero marque una ubicación en el mapa", "warning");
+                    return;
+                }
+                
+                // Limpiar ruta anterior si existe
+                if (this.routingControl) {
+                    this.map.removeControl(this.routingControl);
+                    this.routingControl = null;
+                }
+                
+                // Calcular ruta desde la estación hasta el incidente
+                this.routingControl = L.Routing.control({
+                    waypoints: [
+                        L.latLng(CONFIG.estacion.coordenadas[0], CONFIG.estacion.coordenadas[1]),
+                        L.latLng(this.selectedLocation[0], this.selectedLocation[1])
+                    ],
+                    routeWhileDragging: false,
+                    showAlternatives: false,
+                    lineOptions: {
+                        styles: [
+                            {color: '#ef4444', opacity: 0.8, weight: 6},
+                            {color: '#f59e0b', opacity: 0.5, weight: 4}
+                        ]
+                    },
+                    createMarker: function(i, waypoint, n) {
+                        return null;
+                    },
+                    collapsible: true,
+                    fitSelectedRoutes: true,
+                    show: false
+                }).addTo(this.map);
+                
+                // Escuchar cuando la ruta se haya calculado
+                this.routingControl.on('routesfound', (e) => {
+                    const routes = e.routes;
+                    const route = routes[0];
+                    
+                    if (route) {
+                        // Actualizar información de la ruta
+                        const distanciaKm = (route.summary.totalDistance / 1000).toFixed(1);
+                        const tiempoMin = Math.round(route.summary.totalTime / 60);
+                        const velocidadPromedio = distanciaKm / (tiempoMin / 60);
+                        
+                        document.getElementById('route-distance').textContent = `${distanciaKm} km`;
+                        document.getElementById('route-time').textContent = `${tiempoMin} min`;
+                        document.getElementById('route-speed').textContent = `${velocidadPromedio.toFixed(0)} km/h`;
+                        
+                        document.getElementById('route-info').style.display = 'block';
+                        this.routeVisible = true;
+                        
+                        // Ajustar vista para mostrar toda la ruta
+                        const bounds = L.latLngBounds([CONFIG.estacion.coordenadas, this.selectedLocation]);
+                        this.map.fitBounds(bounds, { padding: [50, 50] });
+                        
+                        this.showToast(`Ruta calculada: ${tiempoMin} minutos`, "success");
+                    }
+                });
+                
+                this.routingControl.on('routingerror', (e) => {
+                    this.showToast("Error calculando ruta", "danger");
+                });
+            }
+            
+            clearRoute() {
+                if (this.routingControl) {
+                    this.map.removeControl(this.routingControl);
+                    this.routingControl = null;
+                }
+                document.getElementById('route-info').style.display = 'none';
+                this.routeVisible = false;
+                this.showToast("Ruta limpiada", "info");
+            }
+            
+            emergencyStop() {
+                // Cancelar todos los despachos
+                this.selectedMobiles.clear();
+                document.querySelectorAll('.mobile-btn').forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+                this.updateMobileCount();
+                
+                // Limpiar ubicación
+                this.clearLocation();
+                
+                // Limpiar ruta
+                this.clearRoute();
+                
+                // Resetear formulario
+                document.getElementById('quick-form').reset();
+                
+                // Mostrar alerta
+                this.showToast("🚨 PARADA DE EMERGENCIA ACTIVADA - TODAS LAS OPERACIONES CANCELADAS", "danger");
+                
+                // Sonido de alerta (simulado)
+                if (this.hardwareConnected) {
+                    console.log("Enviando señal de parada de emergencia al hardware...");
+                    // Aquí iría la comunicación real con el hardware
+                }
+            }
+            
+            saveConfig() {
+                const nombre = document.getElementById('input-station').value.trim();
+                const coords = document.getElementById('input-coords').value.trim();
+                const radio = parseInt(document.getElementById('input-radius').value);
+                
+                if (!nombre) {
+                    this.showToast("Ingrese un nombre para la estación", "warning");
+                    return;
+                }
+                
+                if (!coords) {
+                    this.showToast("Ingrese las coordenadas", "warning");
+                    return;
+                }
+                
+                // Validar formato de coordenadas
+                const coordParts = coords.split(',').map(part => parseFloat(part.trim()));
+                if (coordParts.length !== 2 || isNaN(coordParts[0]) || isNaN(coordParts[1])) {
+                    this.showToast("Formato de coordenadas inválido. Use: latitud, longitud", "warning");
+                    return;
+                }
+                
+                if (isNaN(radio) || radio < 1 || radio > 50) {
+                    this.showToast("Radio de cobertura debe ser entre 1 y 50 km", "warning");
+                    return;
+                }
+                
+                // Actualizar configuración
+                CONFIG.estacion.nombre = nombre;
+                CONFIG.estacion.coordenadas = coordParts;
+                CONFIG.estacion.radioCobertura = radio;
+                
+                // Actualizar display
+                this.updateConfigDisplay();
+                
+                // Actualizar mapa
+                this.map.setView(coordParts, 14);
+                
+                // Limpiar y redibujar
+                this.map.eachLayer(layer => {
+                    if (layer instanceof L.Circle || (layer instanceof L.Marker && !this.mobileMarkers.has(layer))) {
+                        this.map.removeLayer(layer);
+                    }
+                });
+                
+                this.showEstacion();
+                this.showCobertura();
+                
+                this.showToast("Configuración guardada exitosamente", "success");
+            }
+            
+            resetConfig() {
+                // Restaurar configuración predeterminada
+                CONFIG.estacion = {
+                    nombre: "Quilmes Centro",
+                    coordenadas: [-34.7200, -58.2580],
+                    radioCobertura: 5,
+                    zonaOperativa: "Zona 1 - Centro",
+                    contacto: "011-4251-2222"
+                };
+                
+                this.updateConfigDisplay();
+                
+                // Actualizar mapa
+                this.map.setView(CONFIG.estacion.coordenadas, 14);
+                
+                // Limpiar y redibujar
+                this.map.eachLayer(layer => {
+                    if (layer instanceof L.Circle || (layer instanceof L.Marker && !this.mobileMarkers.has(layer))) {
+                        this.map.removeLayer(layer);
+                    }
+                });
+                
+                this.showEstacion();
+                this.showCobertura();
+                
+                this.showToast("Configuración restaurada a valores predeterminados", "info");
+            }
+            
+            async dispatch() {
+                // Validación completa
+                const incidentType = document.getElementById('incident-type').value;
+                const address = document.getElementById('address-input').value.trim();
+                const details = document.getElementById('quick-details').value.trim();
+                
+                if (!incidentType) {
+                    this.showToast("Seleccione el tipo de incidente", "warning");
+                    document.getElementById('incident-type').focus();
+                    return;
+                }
+                
+                if (!address) {
+                    this.showToast("Ingrese una dirección", "warning");
+                    document.getElementById('address-input').focus();
+                    return;
+                }
+                
+                if (!this.selectedLocation) {
+                    this.showToast("Marque la ubicación en el mapa", "warning");
+                    return;
+                }
+                
+                if (this.selectedMobiles.size === 0) {
+                    this.showToast("Seleccione al menos un móvil disponible", "warning");
+                    return;
+                }
+                
+                // Preparar datos del incidente
+                const incidentData = {
+                    id: Date.now(),
+                    tipo: incidentType,
+                    tipoNombre: CONFIG.tiposIncidente[incidentType]?.nombre || 'Desconocido',
+                    direccion: address,
+                    ubicacion: this.selectedLocation,
+                    prioridad: this.priority,
+                    detalles: details || 'Sin detalles adicionales',
+                    moviles: Array.from(this.selectedMobiles).map(id => 
+                        CONFIG.moviles.find(m => m.id === id)?.nombre || `Móvil ${id}`
+                    ),
+                    timestamp: new Date().toISOString(),
+                    estado: 'despachado',
+                    tiempoRespuesta: this.getResponseTime()
+                };
+                
+                // Confirmación final
+                const confirmMessage = `
+                    <div class="text-start">
+                        <strong>CONFIRMAR DESPACHO</strong><br>
+                        <hr>
+                        <strong>Tipo:</strong> ${incidentData.tipoNombre}<br>
+                        <strong>Ubicación:</strong> ${address}<br>
+                        <strong>Prioridad:</strong> ${incidentData.prioridad.toUpperCase()}<br>
+                        <strong>Móviles:</strong> ${incidentData.moviles.join(', ') || 'Ninguno'}<br>
+                        <strong>Detalles:</strong> ${details || 'Ninguno'}<br>
+                        <hr>
+                        <strong>Tiempo estimado de respuesta:</strong> ${this.calculateETA(incidentData.ubicacion)} minutos
+                    </div>
+                `;
+                
+                if (!await this.showConfirm("CONFIRMAR DESPACHO", confirmMessage, "Despachar", "Cancelar")) {
+                    return;
+                }
+                
+                // Iniciar despacho
+                this.startDispatch(incidentData);
+            }
+            
+            async startDispatch(incidentData) {
+                // Bloquear interfaz
+                const btn = document.getElementById('btn-dispatch');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="bi bi-hourglass-split"></i> DESPACHANDO...';
+                btn.disabled = true;
+                
+                // Mostrar progreso
+                this.showToast(`🚒 DESPACHANDO ${incidentData.moviles.length} UNIDAD(ES)`, "warning");
+                
+                // Simular comunicación con hardware
+                if (this.hardwareConnected) {
+                    this.sendToHardware(incidentData);
+                }
+                
+                // Actualizar estado de móviles
+                incidentData.moviles.forEach(mobileName => {
+                    const mobile = CONFIG.moviles.find(m => m.nombre === mobileName);
+                    if (mobile) {
+                        mobile.estado = 'ocupado';
+                        // Simular movimiento del móvil hacia el incidente
+                        this.simulateMobileMovement(mobile.id, incidentData.ubicacion);
+                    }
+                });
+                
+                // Simular proceso (3-5 segundos)
+                const dispatchTime = 3000 + Math.random() * 2000;
+                
+                setTimeout(() => {
+                    // Actualizar estadísticas
+                    this.incidentCount++;
+                    document.getElementById('incident-count').textContent = this.incidentCount;
+                    document.getElementById('last-incident').textContent = 
+                        `${incidentData.tipoNombre} - ${new Date().toLocaleTimeString()}`;
+                    
+                    // Agregar al historial
+                    this.historial.unshift(incidentData);
+                    if (this.historial.length > CONFIG.maxHistorial) {
+                        this.historial.pop();
+                    }
+                    
+                    // Mostrar éxito
+                    this.showToast(
+                        `✅ DESPACHO COMPLETADO<br>${incidentData.moviles.length} unidad(es) en camino<br>ETA: ${this.calculateETA(incidentData.ubicacion)} min`,
+                        "success"
+                    );
+                    
+                    // Limpiar formulario
+                    document.getElementById('quick-form').reset();
+                    this.clearLocation();
+                    this.clearRoute();
+                    
+                    // Limpiar selección
+                    this.selectedMobiles.clear();
+                    document.querySelectorAll('.mobile-btn').forEach(btn => {
+                        btn.classList.remove('selected');
+                    });
+                    this.updateMobileCount();
+                    
+                    // Restaurar botón
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    
+                    // Centrar en estación
+                    this.map.setView(CONFIG.estacion.coordenadas, 14);
+                    
+                    // Actualizar móviles en mapa
+                    this.updateMobilePositions();
+                    
+                    // Registrar en consola
+                    console.log("📋 Incidente registrado:", incidentData);
+                    console.log("📊 Historial:", this.historial.length, "incidentes");
+                    
+                    // Reiniciar timer de respuesta
+                    this.startResponseTimer();
+                    
+                }, dispatchTime);
+            }
+            
+            simulateMobileMovement(mobileId, destination) {
+                const mobile = CONFIG.moviles.find(m => m.id === mobileId);
+                if (!mobile || !mobile.ubicacion) return;
+                
+                // Simular movimiento gradual hacia el destino
+                const start = mobile.ubicacion;
+                const end = destination;
+                const steps = 10;
+                let step = 0;
+                
+                const moveInterval = setInterval(() => {
+                    step++;
+                    const progress = step / steps;
+                    
+                    // Interpolación lineal
+                    const lat = start[0] + (end[0] - start[0]) * progress;
+                    const lng = start[1] + (end[1] - start[1]) * progress;
+                    
+                    mobile.ubicacion = [lat, lng];
+                    
+                    // Actualizar marcador en mapa
+                    const marker = this.mobileMarkers.get(mobileId);
+                    if (marker) {
+                        marker.setLatLng([lat, lng]);
+                        
+                        // Actualizar popup
+                        marker.setPopupContent(`
+                            <b>${mobile.nombre}</b><br>
+                            Tipo: ${mobile.tipo}<br>
+                            Estado: EN CAMINO (${Math.round(progress * 100)}%)<br>
+                            Destino: Incidente
+                        `);
+                    }
+                    
+                    if (step >= steps) {
+                        clearInterval(moveInterval);
+                        // Cuando llega, simular que atiende el incidente
+                        setTimeout(() => {
+                            mobile.estado = 'disponible';
+                            mobile.ubicacion = destination; // Quedarse en la ubicación
+                            this.loadMobiles();
+                            this.updateMobilePositions();
+                            this.showToast(`${mobile.nombre} ha llegado al incidente`, "info");
+                        }, 5000);
+                    }
+                }, 500);
+            }
+            
+            calculateETA(destination) {
+                if (!this.selectedLocation) return "N/A";
+                
+                // Cálculo simple de ETA basado en distancia
+                const station = CONFIG.estacion.coordenadas;
+                const distance = this.calculateDistance(station[0], station[1], destination[0], destination[1]);
+                
+                // Suponiendo 60 km/h en zona urbana
+                const speed = 60; // km/h
+                const timeHours = distance / speed;
+                const timeMinutes = Math.max(2, Math.ceil(timeHours * 60)); // Mínimo 2 minutos
+                
+                return timeMinutes;
+            }
+            
+            calculateDistance(lat1, lon1, lat2, lon2) {
+                const R = 6371; // Radio de la Tierra en km
+                const dLat = (lat2 - lat1) * Math.PI / 180;
+                const dLon = (lon2 - lon1) * Math.PI / 180;
+                const a = 
+                    Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                    Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return R * c;
+            }
+            
+            getResponseTime() {
+                if (!this.startTime) return 0;
+                return Math.round((Date.now() - this.startTime) / 1000);
+            }
+            
+            startResponseTimer() {
+                this.startTime = Date.now();
+                this.responseTimer = setInterval(() => {
+                    const seconds = Math.round((Date.now() - this.startTime) / 1000);
+                    document.getElementById('response-time').textContent = `${seconds}s`;
+                }, 1000);
+            }
+            
+            // ===== HARDWARE INTEGRATION =====
+            initHardware() {
+                // Simulación de conexión a hardware
+                document.getElementById('hardware-status').textContent = "Simulación";
+                document.getElementById('hardware-led').classList.add('connected');
+                
+                // Event listeners para hardware simulado
+                window.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey && e.key === 'h') {
+                        this.toggleHardware();
+                    }
+                    
+                    // Parada de emergencia con ESC
+                    if (e.key === 'Escape') {
+                        this.emergencyStop();
+                    }
+                    
+                    // Calcular ruta con F2
+                    if (e.key === 'F2') {
+                        this.calculateRoute();
+                    }
+                });
+                
+                console.log("🖥️  Hardware simulado inicializado");
+                console.log("📋 Atajos de teclado:");
+                console.log("   Ctrl+H - Alternar hardware");
+                console.log("   F2 - Calcular ruta");
+                console.log("   ESC - Parada de emergencia");
+            }
+            
+            connectHardware() {
+                if (this.hardwareConnected) {
+                    this.disconnectHardware();
+                    return;
+                }
+                
+                this.showToast("Conectando con hardware...", "info");
+                
+                // Simular conexión
+                setTimeout(() => {
+                    this.hardwareConnected = true;
+                    CONFIG.hardware.estado = "conectado";
+                    CONFIG.hardware.ultimaConexion = new Date().toISOString();
+                    
+                    document.getElementById('hardware-status').textContent = "Conectado";
+                    document.getElementById('hardware-led').classList.add('connected');
+                    document.getElementById('btn-connect-hardware').innerHTML = 
+                        '<i class="bi bi-plug-fill"></i> DESCONECTAR HARDWARE';
+                    
+                    this.showToast("✅ Hardware conectado exitosamente", "success");
+                    console.log("🔌 Hardware conectado:", CONFIG.hardware);
+                    
+                    // Simular recepción de datos del hardware
+                    this.simulateHardwareData();
+                    
+                }, 1500);
+            }
+            
+            disconnectHardware() {
+                this.hardwareConnected = false;
+                CONFIG.hardware.estado = "desconectado";
+                
+                document.getElementById('hardware-status').textContent = "Desconectado";
+                document.getElementById('hardware-led').classList.remove('connected');
+                document.getElementById('btn-connect-hardware').innerHTML = 
+                    '<i class="bi bi-plug"></i> CONECTAR HARDWARE';
+                
+                this.showToast("Hardware desconectado", "info");
+                console.log("🔌 Hardware desconectado");
+            }
+            
+            toggleHardware() {
+                if (this.hardwareConnected) {
+                    this.disconnectHardware();
+                } else {
+                    this.connectHardware();
+                }
+            }
+            
+            simulateHardwareData() {
+                if (!this.hardwareConnected) return;
+                
+                // Simular envío periódico de datos del hardware
+                setInterval(() => {
+                    // Simular datos de sensores
+                    const sensorData = {
+                        temperatura: 25 + Math.random() * 5,
+                        humedad: 60 + Math.random() * 20,
+                        gas: Math.random() * 100,
+                        movimiento: Math.random() > 0.7,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    // Simular GPS de móviles
+                    CONFIG.moviles.forEach(movil => {
+                        if (movil.estado === 'ocupado' && Math.random() > 0.5) {
+                            // Pequeño movimiento aleatorio
+                            movil.ubicacion[0] += (Math.random() - 0.5) * 0.001;
+                            movil.ubicacion[1] += (Math.random() - 0.5) * 0.001;
+                        }
+                    });
+                    
+                    // Actualizar posiciones en mapa
+                    this.updateMobilePositions();
+                    
+                }, 5000);
+            }
+            
+            sendToHardware(data) {
+                if (!this.hardwareConnected) return;
+                
+                console.log("📤 Enviando datos al hardware:", data);
+                
+                // Aquí iría el código real para comunicarse con el hardware
+                // Ejemplo: enviar por serial, MQTT, WebSocket, etc.
+                
+                // Simulación de envío
+                const hardwareData = {
+                    comando: "DESPACHAR",
+                    incidente: data.tipoNombre,
+                    ubicacion: data.ubicacion,
+                    prioridad: data.prioridad,
+                    moviles: data.moviles,
+                    timestamp: new Date().toISOString()
+                };
+                
+                console.log("📦 Datos preparados para hardware:", hardwareData);
+                this.showToast("Datos enviados al hardware", "info");
+            }
+            
+            // ===== UTILIDADES =====
+            async showConfirm(title, message, confirmText = "Aceptar", cancelText = "Cancelar") {
+                return new Promise((resolve) => {
+                    const modal = document.createElement('div');
+                    modal.className = 'modal fade show d-block';
+                    modal.style.background = 'rgba(0,0,0,0.5)';
+                    modal.innerHTML = `
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content" style="background: #1e293b; color: white; border: 1px solid #dc2626;">
+                                <div class="modal-header border-secondary">
+                                    <h5 class="modal-title">${title}</h5>
+                                    <button type="button" class="btn-close btn-close-white" onclick="this.closest('.modal').remove(); resolve(null)"></button>
+                                </div>
+                                <div class="modal-body">
+                                    ${message}
+                                </div>
+                                <div class="modal-footer border-secondary">
+                                    <button type="button" class="btn btn-secondary" onclick="this.closest('.modal').remove(); resolve(false)">
+                                        ${cancelText}
+                                    </button>
+                                    <button type="button" class="btn btn-primary" onclick="this.closest('.modal').remove(); resolve(true)">
+                                        ${confirmText}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    document.body.appendChild(modal);
+                });
+            }
+            
+            showToast(message, type = "info") {
+                const toast = document.getElementById('toast');
+                const toastMessage = document.getElementById('toast-message');
+                
+                const colors = {
+                    success: "#22c55e",
+                    warning: "#f59e0b",
+                    danger: "#dc2626",
+                    info: "#3b82f6"
+                };
+                
+                const icons = {
+                    success: "check-circle",
+                    warning: "exclamation-triangle",
+                    danger: "x-circle",
+                    info: "info-circle"
+                };
+                
+                toast.style.borderColor = colors[type] || colors.info;
+                toastMessage.innerHTML = `
+                    <i class="bi bi-${icons[type] || 'info-circle'} me-2"></i> 
+                    ${message}
+                `;
+                
+                toast.style.display = 'block';
+                
+                setTimeout(() => {
+                    toast.style.display = 'none';
+                }, type === 'danger' ? 5000 : 3000);
+            }
+        }
+
+        // ===== INICIALIZACIÓN =====
+        let sistema = null;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            sistema = new SistemaDespachoAvanzado();
+            window.sistema = sistema;
+            
+            // Exponer funciones para integración con hardware
+            window.hardwareInterface = {
+                connect: () => sistema.connectHardware(),
+                disconnect: () => sistema.disconnectHardware(),
+                sendEmergency: (lat, lng, type) => {
+                    sistema.selectedLocation = [lat, lng];
+                    sistema.setLocation({ lat, lng });
+                    if (type) document.getElementById('incident-type').value = type;
+                    sistema.showToast("Emergencia recibida del hardware", "warning");
+                },
+                updateMobilePosition: (id, lat, lng) => {
+                    const mobile = CONFIG.moviles.find(m => m.id === id);
+                    if (mobile) {
+                        mobile.ubicacion = [lat, lng];
+                        sistema.updateMobilePositions();
+                    }
+                },
+                getStatus: () => ({
+                    connected: sistema.hardwareConnected,
+                    station: CONFIG.estacion.nombre,
+                    mobiles: CONFIG.moviles.length,
+                    incidents: sistema.incidentCount
+                })
+            };
+            
+            console.log("🔌 Interfaz de hardware disponible en window.hardwareInterface");
+        });
+
+        // Fallback para carga inmediata
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                if (!sistema) {
+                    sistema = new SistemaDespachoAvanzado();
+                    window.sistema = sistema;
+                }
+            });
+        } else {
+            sistema = new SistemaDespachoAvanzado();
+            window.sistema = sistema;
+        }
+    </script>
+</body>
+</html>

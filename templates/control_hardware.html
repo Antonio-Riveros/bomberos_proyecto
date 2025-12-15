@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Hardware - Bomberos Quilmes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --rojo-bomberos: #dc2626;
+            --azul-bomberos: #1d4ed8;
+            --verde-ok: #22c55e;
+            --amarillo-alerta: #f59e0b;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            min-height: 100vh;
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        
+        .control-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--rojo-bomberos);
+        }
+        
+        .status-panel {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(220, 38, 38, 0.3);
+        }
+        
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        
+        .control-card {
+            background: rgba(30, 41, 59, 0.9);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .control-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--azul-bomberos);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+        
+        .control-card.active {
+            border-color: var(--rojo-bomberos);
+            background: rgba(220, 38, 38, 0.1);
+            box-shadow: 0 10px 25px rgba(220, 38, 38, 0.3);
+        }
+        
+        .control-icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+        }
+        
+        .control-title {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        
+        .control-desc {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-connected {
+            background: var(--verde-ok);
+            animation: pulse 2s infinite;
+        }
+        
+        .status-disconnected {
+            background: #ef4444;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+        
+        .log-panel {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        
+        .log-entry {
+            padding: 5px 10px;
+            margin-bottom: 5px;
+            border-left: 3px solid;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .log-success {
+            border-left-color: var(--verde-ok);
+        }
+        
+        .log-warning {
+            border-left-color: var(--amarillo-alerta);
+        }
+        
+        .log-error {
+            border-left-color: var(--rojo-bomberos);
+        }
+        
+        .btn-custom {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 10px;
+            border: none;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        
+        .btn-sirena {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: white;
+        }
+        
+        .btn-sirena:hover {
+            background: linear-gradient(135deg, #b91c1c, #991b1b);
+            transform: scale(1.05);
+        }
+        
+        .btn-porton {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+        }
+        
+        .btn-porton:hover {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            transform: scale(1.05);
+        }
+        
+        .btn-luces {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+        }
+        
+        .btn-luces:hover {
+            background: linear-gradient(135deg, #d97706, #b45309);
+            transform: scale(1.05);
+        }
+        
+        .btn-emergency {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            animation: emergency-pulse 1s infinite;
+        }
+        
+        @keyframes emergency-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        
+        .modal-custom .modal-content {
+            background: #1e293b;
+            color: white;
+            border: 2px solid var(--rojo-bomberos);
+        }
+        
+        .modal-custom .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+    </style>
+</head>
+<body>
+    <div class="control-container">
+        <!-- Header -->
+        <div class="header">
+            <h1><i class="bi bi-fire"></i> CONTROL DE HARDWARE - BOMBEROS QUILMES</h1>
+            <p class="text-muted">Pruebas simples del sistema de automatización</p>
+        </div>
+        
+        <!-- Status Panel -->
+        <div class="status-panel">
+            <div class="row">
+                <div class="col-md-6">
+                    <h4><i class="bi bi-plug me-2"></i>Estado de Conexión</h4>
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="status-indicator status-connected" id="status-indicator"></span>
+                        <span id="status-text">Conectado al hardware</span>
+                    </div>
+                    <div>
+                        <strong>IP del Hardware:</strong> 
+                        <span id="hardware-ip">192.168.0.8</span>
+                    </div>
+                    <div>
+                        <strong>Topic MQTT:</strong> 
+                        <span id="mqtt-topic">sagired/comandos</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <h4><i class="bi bi-cpu me-2"></i>Dispositivos</h4>
+                    <div id="devices-list">
+                        <div class="mb-2">
+                            <i class="bi bi-bell-fill text-danger me-2"></i>
+                            Sirena - <span class="badge bg-success" id="sirena-status">APAGADA</span>
+                        </div>
+                        <div class="mb-2">
+                            <i class="bi bi-door-closed-fill text-primary me-2"></i>
+                            Portón - <span class="badge bg-success" id="porton-status">CERRADO</span>
+                        </div>
+                        <div class="mb-2">
+                            <i class="bi bi-lightbulb-fill text-warning me-2"></i>
+                            Luces - <span class="badge bg-success" id="luces-status">APAGADAS</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Control Grid -->
+        <div class="control-grid">
+            <!-- Sirena Control -->
+            <div class="control-card" id="sirena-card">
+                <div class="control-icon text-danger">
+                    <i class="bi bi-bell-fill"></i>
+                </div>
+                <h3 class="control-title">SIRENA DE EMERGENCIA</h3>
+                <p class="control-desc">Activa/Desactiva la sirena principal y luces de emergencia</p>
+                
+                <div class="btn-group w-100" role="group">
+                    <button class="btn btn-sirena flex-grow-1" onclick="controlSirena('ON')">
+                        <i class="bi bi-play-fill"></i> ACTIVAR SIRENA
+                    </button>
+                    <button class="btn btn-dark flex-grow-1" onclick="controlSirena('OFF')">
+                        <i class="bi bi-stop-fill"></i> APAGAR
+                    </button>
+                </div>
+                
+                <div class="mt-3">
+                    <small class="text-muted">Modo: Mantenimiento hasta apagar</small>
+                </div>
+            </div>
+            
+            <!-- Porton Control -->
+            <div class="control-card" id="porton-card">
+                <div class="control-icon text-primary">
+                    <i class="bi bi-door-open-fill"></i>
+                </div>
+                <h3 class="control-title">PORTÓN AUTOMÁTICO</h3>
+                <p class="control-desc">Abre el portón principal por 5 segundos</p>
+                
+                <button class="btn btn-porton w-100" onclick="controlPorton()">
+                    <i class="bi bi-arrow-right-circle-fill"></i> ABRIR PORTÓN (5s)
+                </button>
+                
+                <div class="mt-3">
+                    <small class="text-muted">Se cerrará automáticamente</small>
+                </div>
+            </div>
+            
+            <!-- Luces Control -->
+            <div class="control-card" id="luces-card">
+                <div class="control-icon text-warning">
+                    <i class="bi bi-lightbulb-fill"></i>
+                </div>
+                <h3 class="control-title">LUCES DE EMERGENCIA</h3>
+                <p class="control-desc">Control independiente de las luces de emergencia</p>
+                
+                <div class="btn-group w-100" role="group">
+                    <button class="btn btn-luces flex-grow-1" onclick="controlLuces('ON')">
+                        <i class="bi bi-lightbulb-fill"></i> ENCENDER
+                    </button>
+                    <button class="btn btn-dark flex-grow-1" onclick="controlLuces('OFF')">
+                        <i class="bi bi-lightbulb-off-fill"></i> APAGAR
+                    </button>
+                </div>
+                
+                <div class="mt-3">
+                    <small class="text-muted">Control manual independiente</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Emergency Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="text-center">
+                    <button class="btn btn-emergency btn-lg" onclick="emergenciaCompleta()">
+                        <i class="bi bi-exclamation-triangle-fill"></i> 
+                        EMERGENCIA COMPLETA
+                    </button>
+                    <p class="text-muted mt-2">Activa sirena, luces y abre portón simultáneamente</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Log Panel -->
+        <div class="status-panel">
+            <h4><i class="bi bi-journal-text me-2"></i>Registro de Comandos</h4>
+            <div class="log-panel" id="log-panel">
+                <div class="log-entry log-success">
+                    [12:30:45] Sistema iniciado - Esperando comandos
+                </div>
+                <div class="log-entry log-warning">
+                    [12:31:10] Prueba: Sirena activada por 2 segundos
+                </div>
+            </div>
+            <div class="mt-3">
+                <button class="btn btn-sm btn-outline-secondary" onclick="clearLogs()">
+                    <i class="bi bi-trash"></i> Limpiar registro
+                </button>
+                <button class="btn btn-sm btn-outline-info ms-2" onclick="testConection()">
+                    <i class="bi bi-wifi"></i> Probar conexión
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap Modal for Connection Settings -->
+    <div class="modal fade modal-custom" id="configModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-gear"></i> Configuración de Conexión</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">IP del Hardware</label>
+                        <input type="text" class="form-control" id="config-ip" value="192.168.0.8">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Topic MQTT</label>
+                        <input type="text" class="form-control" id="config-topic" value="sagired/comandos">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Puerto</label>
+                        <input type="number" class="form-control" id="config-port" value="1883">
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="config-autoconnect" checked>
+                        <label class="form-check-label">Conectar automáticamente al cargar</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="saveConfig()">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- MQTT.js para conexión directa -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    
+    <script>
+        // ===== CONFIGURACIÓN =====
+        let config = {
+            mqttBroker: 'ws://192.168.0.8:9001', // WebSocket para MQTT
+            topic: 'sagired/comandos',
+            connected: false,
+            mqttClient: null,
+            logs: []
+        };
+        
+        // ===== FUNCIONES PRINCIPALES =====
+        function initControl() {
+            loadConfig();
+            connectMQTT();
+            updateStatus();
+            
+            // Event listeners para teclas rápidas
+            document.addEventListener('keydown', (e) => {
+                // Espacio: Emergencia completa
+                if (e.code === 'Space') {
+                    e.preventDefault();
+                    emergenciaCompleta();
+                }
+                // S: Sirena ON
+                if (e.code === 'KeyS' && e.ctrlKey) {
+                    controlSirena('ON');
+                }
+                // P: Portón
+                if (e.code === 'KeyP' && e.ctrlKey) {
+                    controlPorton();
+                }
+            });
+            
+            addLog('Sistema de control iniciado', 'success');
+        }
+        
+        function loadConfig() {
+            const savedConfig = localStorage.getItem('bomberosControlConfig');
+            if (savedConfig) {
+                Object.assign(config, JSON.parse(savedConfig));
+            }
+            updateConfigDisplay();
+        }
+        
+        function saveConfig() {
+            config.mqttBroker = 'ws://' + document.getElementById('config-ip').value + ':9001';
+            config.topic = document.getElementById('config-topic').value;
+            
+            localStorage.setItem('bomberosControlConfig', JSON.stringify(config));
+            updateConfigDisplay();
+            
+            const modal = bootstrap.Modal.getInstance(document.getElementById('configModal'));
+            modal.hide();
+            
+            addLog('Configuración guardada', 'success');
+            reconnectMQTT();
+        }
+        
+        function updateConfigDisplay() {
+            document.getElementById('hardware-ip').textContent = config.mqttBroker.replace('ws://', '').replace(':9001', '');
+            document.getElementById('mqtt-topic').textContent = config.topic;
+        }
+        
+        // ===== MQTT CONNECTION =====
+        function connectMQTT() {
+            addLog(`Conectando a ${config.mqttBroker}...`, 'warning');
+            
+            try {
+                config.mqttClient = mqtt.connect(config.mqttBroker);
+                
+                config.mqttClient.on('connect', () => {
+                    config.connected = true;
+                    updateStatus();
+                    addLog('✅ Conectado al broker MQTT', 'success');
+                    
+                    // Suscribirse a respuestas
+                    config.mqttClient.subscribe('sagired/respuestas', (err) => {
+                        if (!err) {
+                            addLog('Suscrito a respuestas del hardware', 'success');
+                        }
+                    });
+                });
+                
+                config.mqttClient.on('message', (topic, message) => {
+                    const msg = message.toString();
+                    addLog(`📥 ${topic}: ${msg}`, 'info');
+                    
+                    // Actualizar estado según respuesta
+                    if (msg.includes('SIRENA_ON')) {
+                        document.getElementById('sirena-status').textContent = 'ACTIVA';
+                        document.getElementById('sirena-status').className = 'badge bg-danger';
+                        document.getElementById('sirena-card').classList.add('active');
+                    } else if (msg.includes('SIRENA_OFF')) {
+                        document.getElementById('sirena-status').textContent = 'APAGADA';
+                        document.getElementById('sirena-status').className = 'badge bg-success';
+                        document.getElementById('sirena-card').classList.remove('active');
+                    }
+                });
+                
+                config.mqttClient.on('error', (error) => {
+                    addLog(`❌ Error MQTT: ${error}`, 'error');
+                    config.connected = false;
+                    updateStatus();
+                });
+                
+                config.mqttClient.on('close', () => {
+                    addLog('❌ Conexión MQTT cerrada', 'error');
+                    config.connected = false;
+                    updateStatus();
+                });
+                
+            } catch (error) {
+                addLog(`❌ Error al conectar: ${error}`, 'error');
+                config.connected = false;
+                updateStatus();
+            }
+        }
+        
+        function reconnectMQTT() {
+            if (config.mqttClient) {
+                config.mqttClient.end();
+            }
+            setTimeout(connectMQTT, 1000);
+        }
+        
+        function testConection() {
+            addLog('Probando conexión...', 'warning');
+            sendCommand('TEST', false);
+        }
+        
+        // ===== CONTROL FUNCTIONS =====
+        function sendCommand(command, showLog = true) {
+            if (!config.connected || !config.mqttClient) {
+                addLog('❌ No conectado al hardware', 'error');
+                return false;
+            }
+            
+            try {
+                config.mqttClient.publish(config.topic, command);
+                if (showLog) {
+                    addLog(`📤 Enviado: ${command}`, 'success');
+                }
+                return true;
+            } catch (error) {
+                addLog(`❌ Error enviando comando: ${error}`, 'error');
+                return false;
+            }
+        }
+        
+        function controlSirena(action) {
+            const command = action === 'ON' ? 'SIRENA_ON' : 'SIRENA_OFF';
+            
+            if (sendCommand(command)) {
+                if (action === 'ON') {
+                    // También encender luces con la sirena
+                    setTimeout(() => sendCommand('SIRENA_ON', false), 100);
+                    document.getElementById('luces-status').textContent = 'ENCENDIDAS';
+                    document.getElementById('luces-status').className = 'badge bg-warning';
+                } else {
+                    // También apagar luces
+                    setTimeout(() => sendCommand('SIRENA_OFF', false), 100);
+                    document.getElementById('luces-status').textContent = 'APAGADAS';
+                    document.getElementById('luces-status').className = 'badge bg-success';
+                }
+            }
+        }
+        
+        function controlPorton() {
+            if (sendCommand('PORTON_OPEN')) {
+                document.getElementById('porton-status').textContent = 'ABRIENDO...';
+                document.getElementById('porton-status').className = 'badge bg-warning';
+                
+                // Simular que se cierra después de 5 segundos
+                setTimeout(() => {
+                    document.getElementById('porton-status').textContent = 'CERRADO';
+                    document.getElementById('porton-status').className = 'badge bg-success';
+                }, 5000);
+            }
+        }
+        
+        function controlLuces(action) {
+            const command = action === 'ON' ? 'SIRENA_ON' : 'SIRENA_OFF';
+            
+            if (sendCommand(command)) {
+                if (action === 'ON') {
+                    document.getElementById('luces-status').textContent = 'ENCENDIDAS';
+                    document.getElementById('luces-status').className = 'badge bg-warning';
+                } else {
+                    document.getElementById('luces-status').textContent = 'APAGADAS';
+                    document.getElementById('luces-status').className = 'badge bg-success';
+                }
+            }
+        }
+        
+        function emergenciaCompleta() {
+            addLog('🚨 EMERGENCIA COMPLETA ACTIVADA', 'warning');
+            
+            // Activar todo
+            sendCommand('SIRENA_ON');
+            sendCommand('PORTON_OPEN');
+            
+            // Actualizar estado visual
+            document.getElementById('sirena-status').textContent = 'ACTIVA';
+            document.getElementById('sirena-status').className = 'badge bg-danger';
+            document.getElementById('porton-status').textContent = 'ABRIENDO...';
+            document.getElementById('porton-status').className = 'badge bg-warning';
+            document.getElementById('luces-status').textContent = 'ENCENDIDAS';
+            document.getElementById('luces-status').className = 'badge bg-warning';
+            
+            document.getElementById('sirena-card').classList.add('active');
+            document.getElementById('porton-card').classList.add('active');
+            document.getElementById('luces-card').classList.add('active');
+            
+            // Tiempo de emergencia
+            setTimeout(() => {
+                addLog('Emergencia finalizada automáticamente', 'info');
+                controlSirena('OFF');
+                controlLuces('OFF');
+                
+                document.getElementById('porton-card').classList.remove('active');
+                document.getElementById('luces-card').classList.remove('active');
+            }, 10000); // 10 segundos
+        }
+        
+        // ===== UTILITIES =====
+        function updateStatus() {
+            const indicator = document.getElementById('status-indicator');
+            const statusText = document.getElementById('status-text');
+            
+            if (config.connected) {
+                indicator.className = 'status-indicator status-connected';
+                statusText.textContent = 'Conectado al hardware';
+                statusText.className = 'text-success';
+            } else {
+                indicator.className = 'status-indicator status-disconnected';
+                statusText.textContent = 'Desconectado';
+                statusText.className = 'text-danger';
+            }
+        }
+        
+        function addLog(message, type = 'info') {
+            const now = new Date();
+            const time = now.toLocaleTimeString('es-AR', {hour12: false});
+            
+            const logEntry = {
+                time: time,
+                message: message,
+                type: type
+            };
+            
+            config.logs.unshift(logEntry);
+            if (config.logs.length > 50) {
+                config.logs.pop();
+            }
+            
+            updateLogDisplay();
+        }
+        
+        function updateLogDisplay() {
+            const logPanel = document.getElementById('log-panel');
+            logPanel.innerHTML = '';
+            
+            config.logs.forEach(log => {
+                const div = document.createElement('div');
+                div.className = `log-entry log-${log.type}`;
+                div.innerHTML = `[${log.time}] ${log.message}`;
+                logPanel.appendChild(div);
+            });
+        }
+        
+        function clearLogs() {
+            config.logs = [];
+            updateLogDisplay();
+            addLog('Registro limpiado', 'info');
+        }
+        
+        function showConfig() {
+            const modal = new bootstrap.Modal(document.getElementById('configModal'));
+            modal.show();
+        }
+        
+        // ===== INICIALIZACIÓN =====
+        document.addEventListener('DOMContentLoaded', initControl);
+        
+        // Exponer funciones globales para acceso rápido desde consola
+        window.control = {
+            sirena: controlSirena,
+            porton: controlPorton,
+            luces: controlLuces,
+            emergencia: emergenciaCompleta,
+            config: showConfig,
+            test: testConection,
+            logs: config.logs
+        };
+        
+        console.log('🔧 Control disponible en window.control');
+        console.log('   Ejemplo: window.control.sirena("ON")');
+        console.log('   Ejemplo: window.control.emergencia()');
+    </script>
+</body>
+</html>

@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Control Simple Hardware</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #d32f2f;
+            margin-bottom: 30px;
+        }
+        
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 30px 0;
+        }
+        
+        .btn {
+            padding: 20px;
+            font-size: 18px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        
+        .btn:active {
+            transform: scale(0.95);
+        }
+        
+        .btn-sirena {
+            background: #d32f2f;
+            grid-column: span 2;
+        }
+        
+        .btn-porton {
+            background: #1976d2;
+        }
+        
+        .btn-luces {
+            background: #f57c00;
+        }
+        
+        .btn-emergencia {
+            background: linear-gradient(45deg, #d32f2f, #f57c00);
+            grid-column: span 2;
+            padding: 25px;
+            font-size: 20px;
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 10px;
+            color: #2e7d32;
+            font-weight: bold;
+        }
+        
+        .info {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+            text-align: left;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 10px;
+        }
+        
+        code {
+            background: #e0e0e0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚒 CONTROL SIMPLE HARDWARE</h1>
+        <p>Haz clic para probar los dispositivos:</p>
+        
+        <div class="btn-grid">
+            <button class="btn btn-sirena" onclick="enviarComando('SIRENA_ON')">
+                🔔 ENCENDER SIRENA
+            </button>
+            <button class="btn btn-porton" onclick="enviarComando('PORTON_OPEN')">
+                🚪 ABRIR PORTÓN (5s)
+            </button>
+            <button class="btn btn-luces" onclick="enviarComando('SIRENA_ON')">
+                💡 ENCENDER LUCES
+            </button>
+            <button class="btn btn-sirena" onclick="enviarComando('SIRENA_OFF')">
+                🔕 APAGAR TODO
+            </button>
+            <button class="btn btn-emergencia" onclick="emergenciaCompleta()">
+                🚨 EMERGENCIA COMPLETA
+            </button>
+        </div>
+        
+        <div class="status" id="status">
+            Listo para enviar comandos
+        </div>
+        
+        <div class="info">
+            <h3>📋 Información:</h3>
+            <p><strong>IP Hardware:</strong> <code>192.168.0.8</code></p>
+            <p><strong>Topic MQTT:</strong> <code>sagired/comandos</code></p>
+            <p><strong>URL API:</strong> <code>/api/comando-simple/?c=COMANDO</code></p>
+            
+            <h4>🎹 Teclas rápidas:</h4>
+            <ul>
+                <li><strong>S</strong>: Encender sirena</li>
+                <li><strong>P</strong>: Abrir portón</li>
+                <li><strong>A</strong>: Apagar todo</li>
+                <li><strong>ESPACIO</strong>: Emergencia completa</li>
+            </ul>
+            
+            <h4>🔗 Prueba directa con estas URLs:</h4>
+            <p><a href="/api/comando-simple/?c=SIRENA_ON" target="_blank">/api/comando-simple/?c=SIRENA_ON</a></p>
+            <p><a href="/api/comando-simple/?c=PORTON_OPEN" target="_blank">/api/comando-simple/?c=PORTON_OPEN</a></p>
+            <p><a href="/api/comando-simple/?c=SIRENA_OFF" target="_blank">/api/comando-simple/?c=SIRENA_OFF</a></p>
+        </div>
+    </div>
+
+    <script>
+        async function enviarComando(comando) {
+            const status = document.getElementById('status');
+            status.textContent = `Enviando: ${comando}...`;
+            status.style.background = '#fff3e0';
+            status.style.color = '#ef6c00';
+            
+            try {
+                // Usar la API simple GET
+                const response = await fetch(`/api/comando-simple/?c=${comando}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    status.textContent = `✅ ${data.message}`;
+                    status.style.background = '#e8f5e9';
+                    status.style.color = '#2e7d32';
+                } else {
+                    throw new Error(data.message || 'Error desconocido');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                status.textContent = `❌ Error: ${error.message}`;
+                status.style.background = '#ffebee';
+                status.style.color = '#c62828';
+                
+                // Intentar con POST si GET falla
+                try {
+                    const response = await fetch('/api/comando-mqtt/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ comando: comando })
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        status.textContent = `✅ Comando enviado (POST): ${comando}`;
+                        status.style.background = '#e8f5e9';
+                        status.style.color = '#2e7d32';
+                    }
+                } catch (error2) {
+                    console.error('Error POST:', error2);
+                }
+            }
+        }
+        
+        function emergenciaCompleta() {
+            enviarComando('SIRENA_ON');
+            setTimeout(() => enviarComando('PORTON_OPEN'), 500);
+            setTimeout(() => enviarComando('SIRENA_ON'), 1000);
+            
+            document.getElementById('status').textContent = '🚨 EMERGENCIA ACTIVADA';
+            document.getElementById('status').style.background = '#ffebee';
+            document.getElementById('status').style.color = '#c62828';
+        }
+        
+        // Teclas rápidas
+        document.addEventListener('keydown', (e) => {
+            // S: Sirena
+            if (e.key === 's' || e.key === 'S') {
+                e.preventDefault();
+                enviarComando('SIRENA_ON');
+            }
+            // P: Portón
+            if (e.key === 'p' || e.key === 'P') {
+                e.preventDefault();
+                enviarComando('PORTON_OPEN');
+            }
+            // A: Apagar todo
+            if (e.key === 'a' || e.key === 'A') {
+                e.preventDefault();
+                enviarComando('SIRENA_OFF');
+            }
+            // Espacio: Emergencia
+            if (e.code === 'Space') {
+                e.preventDefault();
+                emergenciaCompleta();
+            }
+        });
+        
+        console.log('Teclas rápidas habilitadas: S, P, A, Espacio');
+        console.log('Prueba con: fetch("/api/comando-simple/?c=SIRENA_ON")');
+    </script>
+</body>
+</html>
