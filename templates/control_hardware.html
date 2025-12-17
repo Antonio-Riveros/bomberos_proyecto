@@ -545,15 +545,25 @@
             
             if (sendCommand(command)) {
                 if (action === 'ON') {
-                    // También encender luces con la sirena
-                    setTimeout(() => sendCommand('SIRENA_ON', false), 100);
+                    // 1. Prender cartel de SIRENA
+                    document.getElementById('sirena-status').textContent = 'ACTIVA';
+                    document.getElementById('sirena-status').className = 'badge bg-danger';
+                    document.getElementById('sirena-card').classList.add('active');
+
+                    // 2. Prender cartel de LUCES (¡Agregamos esto de nuevo!)
                     document.getElementById('luces-status').textContent = 'ENCENDIDAS';
                     document.getElementById('luces-status').className = 'badge bg-warning';
+                    document.getElementById('luces-card').classList.add('active');
+
                 } else {
-                    // También apagar luces
-                    setTimeout(() => sendCommand('SIRENA_OFF', false), 100);
+                    // Apagar TODO
+                    document.getElementById('sirena-status').textContent = 'APAGADA';
+                    document.getElementById('sirena-status').className = 'badge bg-success';
+                    document.getElementById('sirena-card').classList.remove('active');
+
                     document.getElementById('luces-status').textContent = 'APAGADAS';
                     document.getElementById('luces-status').className = 'badge bg-success';
+                    document.getElementById('luces-card').classList.remove('active');
                 }
             }
         }
@@ -571,48 +581,69 @@
             }
         }
         
-        function controlLuces(action) {
-            const command = action === 'ON' ? 'SIRENA_ON' : 'SIRENA_OFF';
-            
-            if (sendCommand(command)) {
-                if (action === 'ON') {
-                    document.getElementById('luces-status').textContent = 'ENCENDIDAS';
-                    document.getElementById('luces-status').className = 'badge bg-warning';
-                } else {
-                    document.getElementById('luces-status').textContent = 'APAGADAS';
-                    document.getElementById('luces-status').className = 'badge bg-success';
-                }
-            }
+        // Busca esta función y déjala así:
+function controlLuces(action) {
+    // CAMBIO AQUÍ: Usamos LUCES_ON y LUCES_OFF
+    const command = action === 'ON' ? 'LUCES_ON' : 'LUCES_OFF';
+    
+    if (sendCommand(command)) {
+        if (action === 'ON') {
+            document.getElementById('luces-status').textContent = 'ENCENDIDAS';
+            document.getElementById('luces-status').className = 'badge bg-warning';
+        } else {
+            document.getElementById('luces-status').textContent = 'APAGADAS';
+            document.getElementById('luces-status').className = 'badge bg-success';
         }
+    }
+}
         
         function emergenciaCompleta() {
             addLog('🚨 EMERGENCIA COMPLETA ACTIVADA', 'warning');
             
-            // Activar todo
-            sendCommand('SIRENA_ON');
+            //COMBO (Rojo + Amarillo)
+            sendCommand('EMERGENCIA_ON'); 
+            
+            // Enviamos la orden del portón por separado
             sendCommand('PORTON_OPEN');
             
-            // Actualizar estado visual
+            // Actualizar estado visual 
             document.getElementById('sirena-status').textContent = 'ACTIVA';
             document.getElementById('sirena-status').className = 'badge bg-danger';
+            
             document.getElementById('porton-status').textContent = 'ABRIENDO...';
             document.getElementById('porton-status').className = 'badge bg-warning';
+            
             document.getElementById('luces-status').textContent = 'ENCENDIDAS';
             document.getElementById('luces-status').className = 'badge bg-warning';
             
+            // Iluminamos las tarjetas
             document.getElementById('sirena-card').classList.add('active');
             document.getElementById('porton-card').classList.add('active');
             document.getElementById('luces-card').classList.add('active');
             
-            // Tiempo de emergencia
+            // Tiempo de emergencia (10 segundos)
             setTimeout(() => {
                 addLog('Emergencia finalizada automáticamente', 'info');
-                controlSirena('OFF');
-                controlLuces('OFF');
                 
+                // Usamos el comando de apagado general que creaste en main.py
+                sendCommand('EMERGENCIA_OFF'); 
+                
+                // Opcional: Si prefieres usar las funciones individuales, descomenta esto:
+                // controlSirena('OFF');
+                // controlLuces('OFF');
+                
+                // Limpieza visual
+                document.getElementById('sirena-status').textContent = 'APAGADA';
+                document.getElementById('sirena-status').className = 'badge bg-success';
+                document.getElementById('luces-status').textContent = 'APAGADAS';
+                document.getElementById('luces-status').className = 'badge bg-success';
+                document.getElementById('porton-status').textContent = 'CERRADO'; // Agregué esto por prolijidad
+                document.getElementById('porton-status').className = 'badge bg-success';
+
+                document.getElementById('sirena-card').classList.remove('active');
                 document.getElementById('porton-card').classList.remove('active');
                 document.getElementById('luces-card').classList.remove('active');
-            }, 10000); // 10 segundos
+            }, 10000); 
         }
         
         // ===== UTILITIES =====
